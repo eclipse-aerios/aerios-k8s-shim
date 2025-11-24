@@ -1,5 +1,5 @@
 image:
-  repository:  eclipseaerios/aerios-k8s-shim/aerios-k8s-shim:v1.0.0
+  repository:  eclipseaerios/aerios-k8s-shim:v1.0.0
   pullPolicy: Always
 
 replicas: 1
