@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aerios-k8s-shim-deployment
+  namespace: default  # Replace with your desired namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aerios-k8s-shim
+  template:
+    metadata:
+      labels:
+        app: aerios-k8s-shim
+    spec:
+      serviceAccountName: aerios-k8s-shim-sa
+      containers:
+      - name: aerios-k8s-shim
+        image: aerios-k8s-shim-image:latest  # Replace with FastAPI Docker image
+        ports:
+        - containerPort: 8000
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SECRET_NAME_CB
+          value: keycloak-token-secret-cb
+        - name: SECRET_NAME_HLO
+          value: keycloak-token-secret-hlo
+        - name: KEYCLOAK_URL
+          value: "https://keycloak.cf-mvp-domain.aerios-project.eu"  # Proper Keycloak URL
+        - name: CLIENT_ID_CB
+          value: "test-cb"  # Proper Keycloak client ID
+        - name: CLIENT_SECRET_CB
+          value: "a"  # Proper Keycloak client secret
+        - name: CLIENT_ID_HLO
+          value: "test-hlo"  # Proper Keycloak client ID
+        - name: CLIENT_SECRET_HLO
+          value: ""  # Proper Keycloak client secret
+        - name: WIREGUARD_CONFIGMAP_NAME
+          value: "wireguard-config"  # ConfigMap name to store the WireGuard configuration
+        - name: WIREGUARD_POD_LABEL
+          value: "app=wireguard"  # Label to identify the WireGuard pod(s)
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aerios-k8s-shim-service
+  namespace: default  # Select namespace
+spec:
+  selector:
+    app: aerios-k8s-shim
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+  type: ClusterIP 
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aerios-k8s-shim-sa
+  namespace: default  # Select namespace
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default  # Replace with your desired namespace
+  name: secret-configmap-manager-role
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "update"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "create", "update", "delete"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: secret-configmap-manager-rolebinding
+  namespace: default  # Replace with your desired namespace
+subjects:
+- kind: ServiceAccount
+  name: aerios-k8s-shim-sa
+  namespace: default  # Replace with your desired namespace
+roleRef:
+  kind: Role
+  name: secret-configmap-manager-role
+  apiGroup: rbac.authorization.k8s.io
+

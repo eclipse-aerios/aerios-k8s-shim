@@ -1,0 +1,4 @@
+
+# aeriOS-K8s-shim removed from the hlo-deployments 
+
+- **aeriOS-K8s-shim**, which provides a bridge among aeriOS and K8s. It produces critical aeriOS secret and configmap objects and stores them in the underlying K8s environment. The objects include a private/public key pair for each domain, JWT tokens to authorize m2m communication among HLO and context broker components, and WireGuard configuration for network overlay establishment.  
