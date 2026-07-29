@@ -7,7 +7,11 @@ Endpoints abstract interaction with K8s substrate ...and more
 '''
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException
-from app.wg_server_configurator import ServiceOverlayRequest, setup_k8s_domain_wg
+from app.wg_server_configurator import (
+    SafeIdentifier,
+    ServiceOverlayRequest,
+    setup_k8s_domain_wg,
+)
 from app import subnets_handler
 from app.utils import get_app_logger
 
@@ -91,7 +95,7 @@ class DeleteServiceOverlayRequest(BaseModel):
     '''
     Represents delete-wireguard-overlay expected body
     '''
-    service_id: str
+    service_id: SafeIdentifier
 
 
 @router.delete(

@@ -3,27 +3,65 @@ Module for upadting aeriOS wire-guard server configuration
 and deploy network overlay for connected clients
 '''
 import ipaddress
-from pydantic import BaseModel
+import base64
+import binascii
+from typing import Annotated
+from pydantic import BaseModel, Field, field_validator
 from app.api_clients import k8s_shim
 from app import app_config
 from app import utils
+
+
+SafeIdentifier = Annotated[
+    str,
+    Field(
+        min_length=1,
+        max_length=63,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$",
+    ),
+]
 
 
 class Peer(BaseModel):
     '''
     Model peer configuration
     '''
-    name: str
+    name: SafeIdentifier
     peer_public_key: str
     peer_overlay_ip: str
     is_master: bool = None
+
+    @field_validator("peer_public_key")
+    @classmethod
+    def validate_peer_public_key(cls, value: str) -> str:
+        if "\n" in value or "\r" in value:
+            raise ValueError("peer_public_key must be single-line")
+        try:
+            decoded = base64.b64decode(value, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError(
+                "peer_public_key must be a valid base64 WireGuard key") from exc
+        if len(decoded) != 32:
+            raise ValueError(
+                "peer_public_key must decode to 32 bytes for WireGuard")
+        return value
+
+    @field_validator("peer_overlay_ip")
+    @classmethod
+    def validate_peer_overlay_ip(cls, value: str) -> str:
+        if "\n" in value or "\r" in value:
+            raise ValueError("peer_overlay_ip must be single-line")
+        parsed_ip = ipaddress.ip_address(value)
+        if parsed_ip.version != 4:
+            raise ValueError("peer_overlay_ip must be an IPv4 address")
+        return str(parsed_ip)
 
 
 class ServiceOverlayRequest(BaseModel):
     '''
     Request to request service overlay
     '''
-    service_id: str
+    service_id: SafeIdentifier
     peers: list[Peer]
 
 
