@@ -1,5 +1,5 @@
 image:
-  repository:  eclipseaerios/aerios-k8s-shim:v1.0.0
+  repository: eclipseaerios/aerios-k8s-shim:v1.0.0
   pullPolicy: Always
 
 replicas: 1
@@ -12,22 +12,20 @@ selectorLabels:
 service:
   type: ClusterIP
   port: 8085
-  targetPort: 8000 
+  targetPort: 8000
 
 nodeSelector: {}
-
-
 
 EnvVar:
   DEV: "false"
   namespace_m2m_clients: "default"
   # Namespace where the wireguard server is deployed,
   # NOTE:if it does not exist (kubectl create ns <namespace_wg>) before deploying the helm chart
-  namespace_wg: "default" 
+  namespace_wg: "default"
   secret_name_hlo: "keycloak-token-secret-hlo"
   secret_name_cb: "keycloak-token-secret-cb"
   keycloak_url: "https://keycloak.front-research-group.eu" # URL of the keycloak server
-  realm_openldap: "NCSRD"   # Keycloak realm for openldap
+  realm_openldap: "NCSRD" # Keycloak realm for openldap
   client_id_cb: "ContextBroker" # Client ID for the Context Broker
   client_secret_cb: "" # Client Secret for the Context Broker
   client_id_hlo: "HLO" # Client ID for the HLO

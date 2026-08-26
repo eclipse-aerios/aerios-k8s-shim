@@ -20,7 +20,7 @@ if DEV:
     NAMESPACE_M2M_CLIENTS = "default"
     SECRET_NAME_CB = "keycloak-token-secret-cb"
     SECRET_NAME_HLO = "keycloak-token-secret-hlo"
-    KEYCLOAK_URL = "https://keycloak.cf-mvp-domain.aeros-project.eu"
+    KEYCLOAK_URL = "https://keycloak.front-research-group.eu"
     REALM_OPENLDAP = "keycloack-openldap"
     CLIENT_ID_CB = "ContextBroker"
     CLIENT_SECRET_CB = "cYTiPucIBIuBAXbl2Igf9tIgTkQSiWUv"

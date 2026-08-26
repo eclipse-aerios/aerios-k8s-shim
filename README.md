@@ -6,7 +6,7 @@ This component exposes an, expandable, API which receives requests for accompish
 K8s secrets, configmpas, pods and other objects are abstracted.
 For this reason a service account, a role and an appropriate role binding ensure controlled access to K8s APIs.
 At the moment APIs offers:
-* M2m tokens, acquired from Etrypoint domain Keycklock
+* m2m tokens, acquired from Entrypoint domain Keycloak
 * Wireguard network component re-configuration for network overlays implementation
 * Creates Private and Public key for aeriOS domain.
     * Private key and public keys are pushed in a K8s secret

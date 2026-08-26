@@ -4,13 +4,23 @@ Undertakes interaction with k8s to store and retrieve from a secret object and
            access to Keycloak API to retrieve tokens
 '''
 # Constants for Kubernetes Secrets and Keycloak
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import base64
 import requests
 from app import app_config
 from app.utils import get_app_logger
 from app.api_clients import k8s_shim
 
+TOKEN_REFRESH_WINDOW = timedelta(minutes=5)
+
+def _utc_now():
+    return datetime.now(timezone.utc)
+
+def _parse_expires_at(expires_at):
+    expires_at_dt = datetime.fromisoformat(expires_at)
+    if expires_at_dt.tzinfo is None:
+        return expires_at_dt.replace(tzinfo=timezone.utc)
+    return expires_at_dt
 
 class M2mToken:
     '''
@@ -107,7 +117,7 @@ class M2mToken:
                              self.client_id, self.client_secret)
         payload = f'client_id={self.client_id}&client_secret={self.client_secret}&grant_type=client_credentials'
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-        url = f"{app_config.KEYCLOAK_URL}/auth/realms/{app_config.REALM_OPENLDAP}/protocol/openid-connect/token"
+        url = f"{app_config.KEYCLOAK_URL}/realms/{app_config.REALM_OPENLDAP}/protocol/openid-connect/token"
         response = requests.request("POST",
                                     url,
                                     headers=headers,
@@ -121,8 +131,7 @@ class M2mToken:
         token_data = response.json()
         token = token_data['access_token']
         expires_in = token_data['expires_in']
-        expires_at = (datetime.utcnow() +
-                      timedelta(seconds=expires_in)).isoformat()
+        expires_at = (_utc_now() + timedelta(seconds=expires_in)).isoformat()
         if app_config.DEV:
             self.logger.info("TOKEN RECEIVED: %s", token)
 
@@ -141,17 +150,23 @@ def get_m2m_token(m2m_token_type: str):
 
     if secret is None:
         # Secret not found, get token from Keycloak and create the secret
-        token, expires_at = _m2m.get_keycloak_token()
+        keycloak_token = _m2m.get_keycloak_token()
+        if keycloak_token is None:
+            return None
+        token, expires_at = keycloak_token
         _m2m.create_k8s_secret(token, expires_at)
-        return {"token": token}
+        return token
 
     # Secret found, decode it
     token = base64.b64decode(secret.data['token']).decode()
     expires_at = base64.b64decode(secret.data['expires_at']).decode()
-    expires_at_dt = datetime.fromisoformat(expires_at)
+    expires_at_dt = _parse_expires_at(expires_at)
 
-    if datetime.utcnow() >= expires_at_dt:
-        # Token expired, get a new one and update the secret
-        token, expires_at = _m2m.get_keycloak_token()
+    if _utc_now() >= expires_at_dt - TOKEN_REFRESH_WINDOW:
+        # Token expired or close to expiry, get a new one and update the secret
+        keycloak_token = _m2m.get_keycloak_token()
+        if keycloak_token is None:
+            return None
+        token, expires_at = keycloak_token
         _m2m.update_k8s_secret(token, expires_at)
     return token
